@@ -1,22 +1,54 @@
 import { describe, expect, it } from 'vitest';
-import { BLE_HEADER, LTE_HEADER, parseSerialChunk, parseSerialLine, WIFI_HEADER } from './parser';
+import { BLE_HEADER, LTE_EXTENDED_HEADER, LTE_HEADER, parseSerialChunk, parseSerialLine, WIFI_HEADER } from './parser';
 
 const capturedAt = '2026-04-10T23:52:01.000Z';
 
 describe('parseSerialLine', () => {
   it('detects LTE, WiFi, and BLE headers', () => {
     expect(parseSerialLine(LTE_HEADER, capturedAt)).toEqual({ type: 'header', scanType: 'lte', line: LTE_HEADER });
+    expect(parseSerialLine(LTE_EXTENDED_HEADER, capturedAt)).toEqual({ type: 'header', scanType: 'lte', line: LTE_EXTENDED_HEADER });
     expect(parseSerialLine(WIFI_HEADER, capturedAt)).toEqual({ type: 'header', scanType: 'wifi', line: WIFI_HEADER });
     expect(parseSerialLine(BLE_HEADER, capturedAt)).toEqual({ type: 'header', scanType: 'ble', line: BLE_HEADER });
   });
 
-  it('parses a valid LTE row', () => {
+  it('parses a valid LTE legacy row', () => {
     const line = 'lte,,LTE,0,334,020,1201,390112,3,-73,-101,-10,9,Telcel,-99.1332090,19.4326080';
     const event = parseSerialLine(line, capturedAt);
 
     expect(event.type).toBe('lte');
     if (event.type === 'lte') {
       expect(event.line).toBe(line);
+      expect(event.record.operator).toBe('Telcel');
+      expect(event.record.longitude).toBe('-99.1332090');
+      expect(event.record.latitude).toBe('19.4326080');
+      expect(event.record.capturedAt).toBe(capturedAt);
+      expect(event.record.cellType).toBe('');
+      expect(event.record.eNodeB).toBe('');
+      expect(event.record.pci).toBe('');
+    }
+  });
+
+  it('parses a valid LTE extended row', () => {
+    const line = 'lte,,LTE,FDD-LTE,0,334,020,1201,390112,6095,2,123,3,1300,2115.0,1920.0,-73,-101,-10,9,Telcel,-99.1332090,19.4326080';
+    const event = parseSerialLine(line, capturedAt);
+
+    expect(event.type).toBe('lte');
+    if (event.type === 'lte') {
+      expect(event.record.technology).toBe('LTE');
+      expect(event.record.cellType).toBe('FDD-LTE');
+      expect(event.record.mcc).toBe('334');
+      expect(event.record.cellId).toBe('390112');
+      expect(event.record.eNodeB).toBe('6095');
+      expect(event.record.sector).toBe('2');
+      expect(event.record.pci).toBe('123');
+      expect(event.record.band).toBe('3');
+      expect(event.record.earfcn).toBe('1300');
+      expect(event.record.freqDlMhz).toBe('2115.0');
+      expect(event.record.freqUlMhz).toBe('1920.0');
+      expect(event.record.rssi).toBe('-73');
+      expect(event.record.rsrp).toBe('-101');
+      expect(event.record.rsrq).toBe('-10');
+      expect(event.record.sinr).toBe('9');
       expect(event.record.operator).toBe('Telcel');
       expect(event.record.longitude).toBe('-99.1332090');
       expect(event.record.latitude).toBe('19.4326080');
@@ -49,6 +81,10 @@ describe('parseSerialLine', () => {
 
   it('rejects zero-coordinate rows for every scan type', () => {
     expect(parseSerialLine('lte,,LTE,0,0,0,0,0,0,0,0,0,0,,0.0000000,0.0000000', capturedAt)).toMatchObject({
+      type: 'ignoredInvalidCoordinates',
+      scanType: 'lte'
+    });
+    expect(parseSerialLine('lte,,LTE,FDD-LTE,0,0,0,0,0,0,0,0,0,0,0.0,0.0,0,0,0,0,,0.0000000,0.0000000', capturedAt)).toMatchObject({
       type: 'ignoredInvalidCoordinates',
       scanType: 'lte'
     });

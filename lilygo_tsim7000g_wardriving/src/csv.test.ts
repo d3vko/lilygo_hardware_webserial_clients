@@ -51,18 +51,25 @@ describe('buildCsv', () => {
     );
   });
 
-  it('exports LTE rows using longitude before latitude', () => {
+  it('exports LTE legacy rows with extended columns empty', () => {
     const rows: LteRecord[] = [
       {
         source: 'lte',
         timestamp: '',
         technology: 'LTE',
+        cellType: '',
         status: '0',
         mcc: '334',
         mnc: '020',
         lac: '1201',
         cellId: '390112',
+        eNodeB: '',
+        sector: '',
+        pci: '',
         band: '3',
+        earfcn: '',
+        freqDlMhz: '',
+        freqUlMhz: '',
         rssi: '-73',
         rsrp: '-101',
         rsrq: '-10',
@@ -75,10 +82,45 @@ describe('buildCsv', () => {
     ];
 
     expect(buildCsv('lte', rows).split('\n')[0]).toBe(
-      'Timestamp,Tecnología,Estado,MCC,MNC,LAC,CellID,Banda,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud'
+      'Timestamp,Tecnología,TipoCelda,Estado,MCC,MNC,LAC,CellID,eNodeB,Sector,PCI,Banda,EARFCN,FreqDL_MHz,FreqUL_MHz,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud'
     );
     expect(buildCsv('lte', rows).split('\n')[1]).toBe(
-      ',LTE,0,334,020,1201,390112,3,-73,-101,-10,9,,-99.1332090,19.4326080'
+      ',LTE,,0,334,020,1201,390112,,,,3,,,,-73,-101,-10,9,,-99.1332090,19.4326080'
+    );
+  });
+
+  it('exports LTE extended rows with all columns populated', () => {
+    const rows: LteRecord[] = [
+      {
+        source: 'lte',
+        timestamp: '',
+        technology: 'LTE',
+        cellType: 'FDD-LTE',
+        status: '0',
+        mcc: '334',
+        mnc: '020',
+        lac: '1201',
+        cellId: '390112',
+        eNodeB: '6095',
+        sector: '2',
+        pci: '123',
+        band: '3',
+        earfcn: '1300',
+        freqDlMhz: '2115.0',
+        freqUlMhz: '1920.0',
+        rssi: '-73',
+        rsrp: '-101',
+        rsrq: '-10',
+        sinr: '9',
+        operator: 'Telcel',
+        longitude: '-99.1332090',
+        latitude: '19.4326080',
+        capturedAt
+      }
+    ];
+
+    expect(buildCsv('lte', rows).split('\n')[1]).toBe(
+      ',LTE,FDD-LTE,0,334,020,1201,390112,6095,2,123,3,1300,2115.0,1920.0,-73,-101,-10,9,Telcel,-99.1332090,19.4326080'
     );
   });
 });

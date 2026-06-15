@@ -2,8 +2,12 @@ import type { BleRecord, LteRecord, ParsedSerialEvent, ScanType, WifiRecord } fr
 
 export const LTE_HEADER =
   'Source,Timestamp,Tecnología,Estado,MCC,MNC,LAC,CellID,Banda,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud';
+export const LTE_EXTENDED_HEADER =
+  'Source,Timestamp,Tecnología,TipoCelda,Estado,MCC,MNC,LAC,CellID,eNodeB,Sector,PCI,Banda,EARFCN,FreqDL_MHz,FreqUL_MHz,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud';
 export const WIFI_HEADER = 'Source,Timestamp,Lat,Long,SSID,BSSID,Canal,Señal,Seguridad';
 export const BLE_HEADER = 'Source,Timestamp,Lat,Long,Dirección,RSSI,Nombre';
+
+const LTE_HEADERS = new Set([LTE_HEADER, LTE_EXTENDED_HEADER]);
 
 const HEADER_BY_TYPE: Record<ScanType, string> = {
   lte: LTE_HEADER,
@@ -95,11 +99,20 @@ export function parseCsvLine(line: string): string[] {
 
 function headerForLine(line: string): ScanType | null {
   const normalized = line.trim();
+  if (LTE_HEADERS.has(normalized)) return 'lte';
   const match = Object.entries(HEADER_BY_TYPE).find(([, header]) => header === normalized);
   return match ? (match[0] as ScanType) : null;
 }
 
 function parseLte(fields: string[], line: string, capturedAt: string): ParsedSerialEvent {
+  // Detect extended format by field count: 23 columns (with Source) vs 16 legacy.
+  if (fields.length >= 20) {
+    return parseLteExtended(fields, line, capturedAt);
+  }
+  return parseLteLegacy(fields, line, capturedAt);
+}
+
+function parseLteLegacy(fields: string[], line: string, capturedAt: string): ParsedSerialEvent {
   const longitude = fields[14] ?? '';
   const latitude = fields[15] ?? '';
 
@@ -111,17 +124,62 @@ function parseLte(fields: string[], line: string, capturedAt: string): ParsedSer
     source: 'lte',
     timestamp: fields[1] ?? '',
     technology: fields[2] ?? '',
+    cellType: '',
     status: fields[3] ?? '',
     mcc: fields[4] ?? '',
     mnc: fields[5] ?? '',
     lac: fields[6] ?? '',
     cellId: fields[7] ?? '',
+    eNodeB: '',
+    sector: '',
+    pci: '',
     band: fields[8] ?? '',
+    earfcn: '',
+    freqDlMhz: '',
+    freqUlMhz: '',
     rssi: fields[9] ?? '',
     rsrp: fields[10] ?? '',
     rsrq: fields[11] ?? '',
     sinr: fields[12] ?? '',
     operator: fields[13] ?? '',
+    longitude,
+    latitude,
+    capturedAt
+  };
+
+  return { type: 'lte', record, line };
+}
+
+function parseLteExtended(fields: string[], line: string, capturedAt: string): ParsedSerialEvent {
+  const longitude = fields[21] ?? '';
+  const latitude = fields[22] ?? '';
+
+  if (!hasUsableCoordinates(latitude, longitude)) {
+    return invalidCoordinates('lte', line);
+  }
+
+  const record: LteRecord = {
+    source: 'lte',
+    timestamp: fields[1] ?? '',
+    technology: fields[2] ?? '',
+    cellType: fields[3] ?? '',
+    status: fields[4] ?? '',
+    mcc: fields[5] ?? '',
+    mnc: fields[6] ?? '',
+    lac: fields[7] ?? '',
+    cellId: fields[8] ?? '',
+    eNodeB: fields[9] ?? '',
+    sector: fields[10] ?? '',
+    pci: fields[11] ?? '',
+    band: fields[12] ?? '',
+    earfcn: fields[13] ?? '',
+    freqDlMhz: fields[14] ?? '',
+    freqUlMhz: fields[15] ?? '',
+    rssi: fields[16] ?? '',
+    rsrp: fields[17] ?? '',
+    rsrq: fields[18] ?? '',
+    sinr: fields[19] ?? '',
+    operator: fields[20] ?? '',
     longitude,
     latitude,
     capturedAt

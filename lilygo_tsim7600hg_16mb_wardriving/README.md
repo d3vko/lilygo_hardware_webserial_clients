@@ -7,20 +7,20 @@ The app is read-only over Web Serial. It connects to the device, streams logs, p
 ## Requirements
 
 - Node.js 22 or newer.
-- npm.
+- pnpm 10 or newer (`npm install -g pnpm`).
 - Chrome, Edge, or another Chromium browser with Web Serial support.
 - The app must run from `localhost` or HTTPS for Web Serial access.
 
 ## Setup
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## Development
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open the local Vite URL in a Chromium browser, connect the LilyGO serial device, select the baud rate, and start reading incoming output.
@@ -34,14 +34,14 @@ Default baud rate:
 ## Build And Preview
 
 ```bash
-npm run build
-npm run preview
+pnpm build
+pnpm preview
 ```
 
 ## Tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 The tests cover serial parsing, zero-coordinate filtering, chunk buffering, CSV escaping, and export filenames.
@@ -65,8 +65,10 @@ Timestamp,Lat,Long,Dirección,RSSI,Nombre
 LTE export:
 
 ```csv
-Timestamp,Tecnología,Estado,MCC,MNC,LAC,CellID,Banda,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud
+Timestamp,Tecnología,TipoCelda,Estado,MCC,MNC,LAC,CellID,eNodeB,Sector,PCI,Banda,EARFCN,FreqDL_MHz,FreqUL_MHz,RSSI,RSRP,RSRQ,SINR,Operador,Longitud,Latitud
 ```
+
+The parser accepts both the legacy firmware format (16 serial columns) and the extended format (23 serial columns). Legacy rows fill the seven new columns (`TipoCelda`, `eNodeB`, `Sector`, `PCI`, `EARFCN`, `FreqDL_MHz`, `FreqUL_MHz`) with empty values in the exported CSV.
 
 Downloaded filenames use this format:
 
@@ -78,7 +80,7 @@ lilygo_lte_YYYYMMDD_HHmmss.csv
 
 ## Browser Use
 
-1. Run `npm run dev`.
+1. Run `pnpm dev`.
 2. Open the Vite local URL in Chrome or Edge.
 3. Click `Connect LilyGO USB`.
 4. Choose the LilyGO serial port.
